@@ -1,0 +1,337 @@
+{
+  "schema_version": 1,
+  "architecture_revision": 2,
+  "project": {
+    "name": "ingetrazo",
+    "archetype": "Desktop CAD / 3D modeling application (SketchUp-inspired) with a sheet composer (Laminas), georeferencing/DEM, and a plugin + AI-bridge extension model; single-process Qt desktop app",
+    "framework": "PySide6 (QMainWindow composition, QOpenGLWidget viewport, mm-space QGraphicsScene composer, QSettings, QPdfWriter/QPrinter)",
+    "stack": [
+      "Python 3.11+ (developed on 3.14.7)",
+      "PySide6>=6.7",
+      "numpy>=1.26 (DEM decode/sampling)",
+      "openskp (git SHA pin, .skp import/export)",
+      "ezdxf>=1.4.4 (DXF)",
+      "manifold3d>=3.5.3 (solid booleans)",
+      "pytest (4341 collected / 3536 not-slow)"
+    ],
+    "source": "/home/juan/dev/ingetrazo",
+    "baseline": {
+      "branch": "main",
+      "head": "6be29fe437a7cd992d4e079f71720821b25216b9",
+      "version": "0.5.7",
+      "commits": 1334,
+      "working_tree": "clean"
+    },
+    "scale": {
+      "source_files": 575,
+      "source_lines": 176123,
+      "test_files": 400,
+      "test_functions": 3082
+    }
+  },
+  "architecture": {
+    "current": "Flat horizontal layering by technical role at the repository root: main.py bootstrap; core/ (59 modules) framework-light engine + document model incl. the sheet model core/composition.py; tools/ (31) one modeling tool per module; georef/ (15) real-world location; formats/ (18) parse/write; views/ (23) Qt UI; plugins/ (6) Tools; plus scripts/, i18n/, resources/, materials/, styles/, analysis/, benchmarks/, packaging/, installer/, docs/, tests/. No import cycles; 9 deferred function-level upward seams (7 core->upper, 2 tools->views).",
+    "pattern": "Qt-native layered modular monolith (root layout preserved) + two selective feature slices inside views/ (sheet composer, import/export workflows) + one engine extraction into core/ (picking)",
+    "organization": "core/ (L0 engine + document model) <- tools/, georef/, formats/ (L1 capabilities) <- views/ (L2 Qt UI) <- main.py; plugins/ on top of core+tools+views",
+    "intervention": "ORGANIZE",
+    "migration_strategy": "Behavior-preserving strangler fig, 7 steps: (0) record the green 3,536-test non-slow baseline and add characterization tests for panel dispatch, _rebuild_canvas selection restore and import progress/threading; (1) land this contract, correct docs/architecture.md, extend the CONTRIBUTING.md folder layout, add check_architecture.py to local/CI verification - no code moves; (2) close the 9 upward seams by injection/relocation, one at a time, suite green after each, then flip the core/tools rules to enforced; (3) extract core/picking.py from views/viewport.py (pick index, lazy placement expansion, span cull, depth-under-cursor) with viewport keeping GL state, render passes, input events and thin delegating pick_* entry points; (4) split views/composer.py into views/composer/{painters,items,canvas,window,panels,output}.py along the physical zones it already has, with a permanent __init__.py re-export surface so views/main_window.py:3679 and the 59 test files keep resolving; (5) introduce views/composer/registry.py (SHEET_ITEM_SPECS) and convert the 16 magic panel indices 0-15, the per-type _rebuild_canvas blocks, place_tool and the 62 isinstance selection branches to registry-driven lookups, proven by adding and then removing one throwaway item type; (6) extract views/imports/{imagery,geodata,cad,meshes,skp}.py from the 33-method import/export block at MainWindow 4798-6048, one family at a time, leaving MainWindow with action objects and thin slots wired to views/imports/__init__.py; (7) full non-slow suite, slow suite, and check_architecture.py --completion against the finished tree.",
+    "behavior_change_allowed": false
+  },
+  "preserve": [
+    "Root package layout: main.py, core/, tools/, georef/, formats/, views/, plugins/. No src/, no root features/ layer.",
+    "Dependency direction main -> views -> {tools,formats,georef} -> core, with formats -> georef and georef -> core.",
+    "One module per modeling tool, registered in views/main_window.py (verified healthy locality: tools/<name>.py + small registrations + icons/shortcuts/i18n/tests).",
+    "Command/History undo engine in core/history.py; every document mutation flows through it, keeping the AI Bridge and scripts/ingetrazo_mcp.py transactional.",
+    "Sheet document model in core/composition.py, serialized by formats/igz.py and referenced by core/scene.py.",
+    "Framework-light core/: engine math (snap, hlr, mesh, topology, camera, texture, picking) lives outside Qt widgets.",
+    "Sheet composer as a QGraphicsScene/QGraphicsView in paper millimetres (QGIS-layout precedent, docs/composer-plan.md).",
+    "Viewport as the single Qt-managed QOpenGLWidget owning GL state and input.",
+    "All user-visible strings through core.i18n.tr() with flat per-locale JSON and parity enforced by tests/test_translation_files.py.",
+    "Plugin contract: plugins contribute Tool subclasses only (docs/plugins.md); core/extensions.py remains the discovery point.",
+    "Parsing/writing ownership in formats/ and georef/; views orchestrates but does not parse.",
+    "Deterministic verification: pytest with the slow marker, CI gate .github/workflows/ci.yml, scripts/release_check.sh pre-release comparison recipe.",
+    "Minimal-dependency policy in requirements.txt: no new runtime dependency.",
+    "Packaging: ingetrazo.spec, packaging/flatpak, packaging/snap, installer/ (untouched by this contract).",
+    ".igz schema, shortcut keys, user-visible behavior, visual and performance characteristics."
+  ],
+  "change": [
+    "Split views/composer.py (12,507 lines) into the views/composer/ package along its existing physical zones, with a permanent public re-export surface in __init__.py.",
+    "Introduce views/composer/registry.py (SHEET_ITEM_SPECS) as the single sheet-item extension point, replacing the 16 positional panel indices (0-15), the per-type _rebuild_canvas blocks, place_tool if/elif and the 62 isinstance selection branches.",
+    "Extract the 33 import/export pipeline methods from views/main_window.py (lines 4798-6048) into views/imports/ owners by capability family: skp.py, meshes.py, cad.py, imagery.py, geodata.py; MainWindow keeps action objects and thin slots.",
+    "Extract the Qt-free picking subsystem (pick index, lazy placement expansion/bbox/frame, span cull, visible/tex-run spans, static and flat pick structures, placements-under-pixel, depth-under-cursor) from views/viewport.py into core/picking.py; viewport keeps GL state, render passes, input events and thin delegating pick_* entry points.",
+    "Close the 9 upward import seams: 7 core->upper (autosave writer, library Y_UP_TO_Z_UP, solids fuse, render_blender gltf, history fuse, history SceneDatum, extensions Tool base) and 2 tools->views (select prompts, solid_tools cursor), by injection/relocation only.",
+    "Make the dependency rules mechanically enforceable through .architecture/handoff.json plus check_architecture.py in the local and CI loop.",
+    "Correct the stale ModernGL paragraph and package list in docs/architecture.md and extend the CONTRIBUTING.md folder layout."
+  ],
+  "non_goals": [
+    "Current contract non-goal: do not split core/history.py; current evidence (90 cohesive Command classes, largest method 101 lines, one reason to change) does not justify it.",
+    "Current contract non-goal: do not split views/tray.py or views/icons.py; they are cohesive panel classes and an icon registry.",
+    "Current contract non-goal: no mixin/subclass decomposition of the Viewport widget and no replacement of QOpenGLWidget or QGraphicsScene.",
+    "Current contract non-goal: no change to the .igz schema, any file format, or the plugin contract.",
+    "Current contract non-goal: no i18n tooling migration to .ts/.qm and no translation-key architecture change; the parity test governs drift.",
+    "Current contract non-goal: no packaging changes (PyInstaller, Flatpak, Snap, AppImage, Windows installer).",
+    "Current contract non-goal: no new build system, dependency manager, linter configuration, or code-indexing service.",
+    "Current contract non-goal: no generic views/imports/workflows.py, handlers.py, services.py or helpers.py dumping ground; explicit per-capability family owners are the contract.",
+    "Current contract non-goal: SHEET_ITEM_SPECS is an internal table, not a plugin extension mechanism."
+  ],
+  "structure": {
+    "description": "Root packages unchanged; two new feature slices inside views/ and one new engine module in core/.",
+    "tree": [
+      "main.py                        Qt bootstrap only",
+      "core/                          L0 engine + document model; imports stdlib + numpy + minimal PySide6; never imports tools/views/formats/georef",
+      "core/picking.py                NEW: ray/placement pick index, lazy placement spans, span cull, depth-under-cursor math",
+      "core/history.py                undo engine (Command subclasses) - not split",
+      "core/composition.py            sheet (Laminas) document model + commands - stays in core/",
+      "tools/                         L1 modeling tools, one module per tool; imports core/ + georef/; never imports views/",
+      "georef/                        L1 real-world location; imports core/ only",
+      "formats/                       L1 parse/write; imports core/ + georef/",
+      "views/                         L2 Qt UI; imports core/ + tools/ + formats/ + georef/",
+      "views/main_window.py           composition: menus, toolbars, docks, status bar, actions, thin import/export slots (no pipelines)",
+      "views/viewport.py              the single QOpenGLWidget owner of GL state, render passes and input; delegates ray/geometry work to core/picking.py",
+      "views/composer/                NEW sheet-composer UI slice",
+      "views/composer/__init__.py     permanent public re-export surface",
+      "views/composer/registry.py     NEW SHEET_ITEM_SPECS - the single sheet-item extension point",
+      "views/composer/painters.py     mm-space painters (the 63 module functions)",
+      "views/composer/items.py        _SheetItem + the 16 sheet item classes",
+      "views/composer/canvas.py       ComposerCanvasView: input, placement, registry-driven selection dispatch",
+      "views/composer/window.py       ComposerWindow: composition, caches, undo wiring",
+      "views/composer/panels.py       the 16 property panels",
+      "views/composer/output.py       PDF / DXF / image / print / HLR output",
+      "views/imports/                 NEW import/export workflow owners by capability family",
+      "views/imports/__init__.py      registries + entry points used by views/main_window.py",
+      "views/imports/skp.py           SketchUp .skp import workflow",
+      "views/imports/meshes.py        obj, stl, glb, dae import workflow",
+      "views/imports/cad.py           dxf, dwg import workflow",
+      "views/imports/imagery.py       image planes, orthophoto, photomesh import workflow",
+      "views/imports/geodata.py       survey points, georef import workflow",
+      "views/tray.py icons.py shortcuts.py sheet_tabs.py extension_api.py status_hints.py theme.py prompts.py *_dialog.py  unchanged roles",
+      "plugins/ scripts/ examples/extensions/ tests/ docs/ i18n/ resources/ materials/ styles/ analysis/ benchmarks/ packaging/ installer/  unchanged roles"
+    ]
+  },
+  "ownership": {
+    "sheet_item_type": "views/composer/registry.py (one SHEET_ITEM_SPECS entry) + views/composer/painters.py + views/composer/items.py + views/composer/canvas.py + views/composer/panels.py; model and Command in core/composition.py",
+    "sheet_window_composition": "views/composer/window.py",
+    "sheet_canvas_interaction_and_selection": "views/composer/canvas.py",
+    "sheet_output_pdf_dxf_image_print": "views/composer/output.py",
+    "skp_import_workflow": "views/imports/skp.py",
+    "mesh_import_workflow": "views/imports/meshes.py",
+    "cad_import_workflow": "views/imports/cad.py",
+    "imagery_import_workflow": "views/imports/imagery.py",
+    "geodata_import_workflow": "views/imports/geodata.py",
+    "file_export_workflow": "views/imports/__init__.py",
+    "format_parsing_and_writing": "formats/<fmt>.py",
+    "picking_and_placement_index": "core/picking.py",
+    "gl_render_and_input": "views/viewport.py",
+    "modeling_tool": "tools/<name>.py",
+    "snapping_and_inference": "core/snap.py",
+    "document_mutation_and_undo": "core/history.py",
+    "document_model": "core/*.py",
+    "panels_and_docks": "views/tray.py",
+    "application_composition": "views/main_window.py",
+    "user_visible_strings": "core/i18n.py and i18n/<locale>.json",
+    "plugin_discovery_and_contract": "core/extensions.py",
+    "mcp_ai_bridge": "plugins/ai_bridge.py and scripts/ingetrazo_mcp.py"
+  },
+  "boundaries": {
+    "rules": [
+      {
+        "rule": "core/ must not import tools/, views/, formats/ or georef/ in any form, including function-level deferred imports",
+        "enforcement": "mechanical"
+      },
+      {
+        "rule": "tools/ must not import views/ or formats/",
+        "enforcement": "mechanical"
+      },
+      {
+        "rule": "georef/ must not import views/, tools/ or formats/",
+        "enforcement": "mechanical"
+      },
+      {
+        "rule": "formats/ must not import views/ or tools/",
+        "enforcement": "mechanical"
+      },
+      {
+        "rule": "main.py -> views only; plugins/ may import core, tools and views",
+        "enforcement": "documented"
+      },
+      {
+        "rule": "views/composer/* and views/imports/* are reached only through their __init__.py surface, never through another slice's private internals",
+        "enforcement": "documented"
+      },
+      {
+        "rule": "views/viewport.py zoning: new ray/geometry/spatial-index/picking math goes to core/, new GL state/shaders/render passes/Qt event handling stays in the widget; the file does not gain a second ownership reason",
+        "enforcement": "documented"
+      },
+      {
+        "rule": "views/composer/: a new sheet item type is added through registry.py only - no positional panel index, no per-type isinstance dispatch branch, no per-type canvas rebuild block",
+        "enforcement": "documented"
+      },
+      {
+        "rule": "views/imports/ owns one named module per capability family; a generic workflows.py/handlers.py/services.py dumping ground is a regression",
+        "enforcement": "documented"
+      },
+      {
+        "rule": "SHEET_ITEM_SPECS is internal; plugins contribute Tool subclasses only (docs/plugins.md)",
+        "enforcement": "documented"
+      }
+    ],
+    "zoning": {
+      "views/viewport.py": "GL state, render passes, input events, thin delegating pick_* entry points",
+      "views/composer/": "one sheet-item extension point in registry.py; placement, panels, canvas rebuild and selection dispatch are registry lookups",
+      "views/imports/": "one named module per capability family, containing dialog, threaded parse, progress and scene insertion"
+    }
+  },
+  "verification": {
+    "commands": [
+      "QT_QPA_PLATFORM=offscreen python -m pytest -q -m \"not slow\"",
+      "QT_QPA_PLATFORM=offscreen python -m pytest -q",
+      "python scripts/check_architecture.py .",
+      "python scripts/check_architecture.py . --completion"
+    ],
+    "architecture_checks": [
+      {
+        "type": "require_path",
+        "path": "ARCHITECTURE.md",
+        "phase": "current"
+      },
+      {
+        "type": "require_path",
+        "path": "main.py",
+        "phase": "current"
+      },
+      {
+        "type": "forbid_python_import",
+        "source_glob": "formats/**/*.py",
+        "forbidden_prefixes": ["views", "tools"],
+        "phase": "current"
+      },
+      {
+        "type": "forbid_python_import",
+        "source_glob": "georef/**/*.py",
+        "forbidden_prefixes": ["views", "tools", "formats"],
+        "phase": "current"
+      },
+      {
+        "type": "forbid_path",
+        "path": "src",
+        "phase": "current"
+      },
+      {
+        "type": "forbid_python_import",
+        "source_glob": "core/**/*.py",
+        "forbidden_prefixes": ["tools", "views", "formats", "georef"],
+        "phase": "completion"
+      },
+      {
+        "type": "forbid_python_import",
+        "source_glob": "tools/**/*.py",
+        "forbidden_prefixes": ["views"],
+        "phase": "completion"
+      },
+      {
+        "type": "require_path",
+        "path": "core/picking.py",
+        "phase": "completion"
+      },
+      {
+        "type": "require_path",
+        "path": "views/composer/__init__.py",
+        "phase": "completion"
+      },
+      {
+        "type": "require_path",
+        "path": "views/composer/registry.py",
+        "phase": "completion"
+      },
+      {
+        "type": "require_path",
+        "path": "views/composer/painters.py",
+        "phase": "completion"
+      },
+      {
+        "type": "require_path",
+        "path": "views/composer/items.py",
+        "phase": "completion"
+      },
+      {
+        "type": "require_path",
+        "path": "views/composer/canvas.py",
+        "phase": "completion"
+      },
+      {
+        "type": "require_path",
+        "path": "views/composer/window.py",
+        "phase": "completion"
+      },
+      {
+        "type": "require_path",
+        "path": "views/composer/panels.py",
+        "phase": "completion"
+      },
+      {
+        "type": "require_path",
+        "path": "views/composer/output.py",
+        "phase": "completion"
+      },
+      {
+        "type": "forbid_path",
+        "path": "views/composer.py",
+        "phase": "completion"
+      },
+      {
+        "type": "require_path",
+        "path": "views/imports/__init__.py",
+        "phase": "completion"
+      },
+      {
+        "type": "require_path",
+        "path": "views/imports/skp.py",
+        "phase": "completion"
+      },
+      {
+        "type": "require_path",
+        "path": "views/imports/meshes.py",
+        "phase": "completion"
+      },
+      {
+        "type": "require_path",
+        "path": "views/imports/cad.py",
+        "phase": "completion"
+      },
+      {
+        "type": "require_path",
+        "path": "views/imports/imagery.py",
+        "phase": "completion"
+      },
+      {
+        "type": "require_path",
+        "path": "views/imports/geodata.py",
+        "phase": "completion"
+      }
+    ]
+  },
+  "completion": {
+    "criteria": [
+      "views/composer/ exists with registry.py, painters.py, items.py, canvas.py, window.py, panels.py and output.py, and views/composer.py no longer exists.",
+      "Adding a sheet item type requires one SHEET_ITEM_SPECS entry plus its painter/panel code: no positional panel index, no new isinstance dispatch branch in canvas.py, no new block in the canvas rebuild loop.",
+      "views/imports/ exists with skp.py, meshes.py, cad.py, imagery.py, geodata.py and shared export entry points; views/main_window.py contains no import/export pipeline, only action objects and thin slots.",
+      "core/picking.py exists and owns the pick index, placement span expansion and cull, and depth-under-cursor math; views/viewport.py contains GL state, render passes and input handling with no spatial-index construction.",
+      "Zero upward seams: no file under core/ imports tools, views, formats or georef; no file under tools/ imports views; no file under georef/ imports views, tools or formats; no file under formats/ imports views or tools.",
+      "python scripts/check_architecture.py . and python scripts/check_architecture.py . --completion both pass against the finished tree.",
+      "QT_QPA_PLATFORM=offscreen python -m pytest -q -m \"not slow\" is green at or above the 3,536-test baseline and the slow suite is green.",
+      ".igz documents written by the baseline version still load, the plugin contract is unchanged, and no user-visible string, shortcut key, or visual/performance characteristic changed.",
+      "docs/architecture.md and the CONTRIBUTING.md folder layout match ARCHITECTURE.md."
+    ]
+  },
+  "work_ledger": {
+    "policy": "decompose_do_not_reinterpret",
+    "checkpoint_after_each_work_unit": true,
+    "note": "Work Ledger decomposes this contract into Work Units following migration steps 0-7 in order, with the non-slow suite green at every checkpoint. It must not change owners, dependency rules, module names, or non-goals."
+  },
+  "provenance": {
+    "evidence_policy": "cheapest sufficient: deterministic inspector, rg import graph, sed zone reads, git change sets, one pytest collection plus a spot run. No code indexing; codebase-memory-mcp and CodeGraph were available but unnecessary for this repository.",
+    "supersedes_revision": 1,
+    "supersede_reason": "Revision 1 (baseline 93a428c, 2026-09-21) cited .engineering/PATTERNS.md, .engineering/consistency.yml, .engineering/aicontext.toml and an 'aicontext check' command, and reported ARCHITECTURE.md plus .architecture/handoff.json already written into the target. None of those paths exist in this repository or anywhere in its git history, and the inspector reports no project-native or configured analysis tooling at this baseline. That evidence is withdrawn and re-derived; revision 1's decision to freeze views/viewport.py unsplit is replaced by the core/picking.py extraction and the viewport zoning rule.",
+    "unresolved_material_questions": []
+  }
+}
