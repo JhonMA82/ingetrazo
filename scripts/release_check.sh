@@ -17,7 +17,7 @@ set -euo pipefail
 PREV="${1:?previous tag, e.g. v0.5.2}"
 DOC="${2:?a real .igz, e.g. ~/Descargas/plaza.igz}"
 HERE="$(cd "$(dirname "$0")/.." && pwd)"
-PY="$HERE/venv/bin/python"
+PY="$HERE/.venv/bin/python"
 VER="$("$PY" -c 'import sys; sys.path.insert(0, "'"$HERE"'"); from core.version import __version__; print(__version__)')"
 WORK="$(mktemp -d)"
 trap 'git -C "$HERE" worktree remove --force "$WORK/prev" 2>/dev/null || true; rm -rf "$WORK"' EXIT

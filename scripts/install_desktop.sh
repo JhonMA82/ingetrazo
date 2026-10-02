@@ -46,7 +46,7 @@ fi
 # ── Launcher ────────────────────────────────────────────────────────────────
 mkdir -p "$APPS"
 # Point Exec at this checkout's venv + main.py.
-sed "s|^Exec=.*|Exec=$ROOT/venv/bin/python $ROOT/main.py %f|" \
+sed "s|^Exec=.*|Exec=$ROOT/.venv/bin/python $ROOT/main.py %f|" \
     "$ROOT/packaging/ingetrazo.desktop" > "$APPS/ingetrazo.desktop"
 
 # ── Application icon (dock / app grid) ──────────────────────────────────────

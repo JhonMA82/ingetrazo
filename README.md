@@ -203,15 +203,16 @@ Deliberately minimal — heavy dependencies arrive only when a feature needs the
 ```bash
 git clone https://github.com/ingelibre/ingetrazo.git
 cd ingetrazo
-python3 -m venv venv
-source venv/bin/activate          # Linux / macOS
-# .\venv\Scripts\activate         # Windows
-pip install -r requirements.txt
-python main.py
+uv sync
+uv run python main.py
 ```
 
+`uv sync` reads `pyproject.toml` + `uv.lock` and creates `.venv/` — no manual
+virtualenv and no `requirements.txt` step. `uv run` uses that environment, so
+`uv run python main.py` and `uv run pytest` are all you need.
+
 Developed on **Python 3.14** (3.11+ should work). Run the tests with
-`python -m pytest -q`.
+`uv run pytest -q`.
 
 ## Contributing
 

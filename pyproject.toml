@@ -1,0 +1,37 @@
+[project]
+name = "ingetrazo"
+# The application's source of truth is core/version.py; keep this equal to it.
+# tests/test_pyproject.py fails the build if the two ever drift. uv 0.12.5 has
+# no [tool.uv] version-path, so the value cannot be derived from that file.
+version = "0.5.7"
+description = "A free 3D modeler for architecture, engineering and 3D design."
+requires-python = ">=3.11"
+dependencies = [
+    "PySide6>=6.7",
+    "numpy>=1.26",
+    "openskp",
+    "ezdxf>=1.4.4",
+    "manifold3d>=3.5.3",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+]
+
+[tool.uv]
+# uv resolves this repository's five runtime dependencies and creates the
+# development environment (.venv/). Nothing is built or installed from this
+# project itself: it stays `source = { virtual = "." }` in uv.lock, so no
+# build backend is introduced and the package layout is untouched.
+#
+# SOURCE OF TRUTH: pyproject.toml + uv.lock.
+# requirements.txt is a GENERATED artifact (uv export) kept only because the
+# macOS release job and the Flatpak manifest consume it. Never edit it by hand.
+
+[tool.uv.sources]
+# .skp import and export. Pinned to an exact commit: installers must be
+# reproducible. This is the fork whose feat-write-annotations carries the
+# dimension/leader-text write+read (upstream PR #203); return to @main when
+# that PR merges.
+openskp = { git = "https://github.com/iamahsanmehmood/openskp", rev = "291700bc213655a00461838de71e5f206311e619", subdirectory = "packages/python" }

@@ -1,5 +1,5 @@
 """Benchmark A/B: mismas operaciones sobre la Plaza Yanque, medidas con reloj.
-Uso: cd <checkout> && <venv python> bench.py <igz> <etiqueta> <salida.json>
+Uso: cd <checkout> && <uv run python> bench.py <igz> <etiqueta> <salida.json>
 Abre una ventana GL real (xcb) unos segundos."""
 import os, sys, json, time, statistics as st, random
 os.environ["QT_QPA_PLATFORM"] = "xcb"

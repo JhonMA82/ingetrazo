@@ -7,19 +7,21 @@ Thank you for your interest in IngeTrazo! Contributions of any kind are welcome 
 ```bash
 git clone https://github.com/<your-user>/ingetrazo.git
 cd ingetrazo
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-python main.py
+uv sync
+uv run python main.py
 ```
+
+`uv sync` creates `.venv/` from `pyproject.toml` + `uv.lock`, and `uv run` uses
+it. Those two files are the dependency source of truth; do not hand-edit
+`uv.lock`, and do not add dependencies without saying so in a pull request.
 
 Requires Python 3.12+.
 
 ## Tests and CI
 
 ```bash
-python -m pytest -m "not slow"     # the fast suite (~3,100 tests, ~5 min; what CI runs)
-python -m pytest                   # everything (~3,900), including the slow fuzz sweeps
+uv run pytest -q -m "not slow"     # the fast suite (3,536 tests; what CI runs)
+uv run pytest -q                   # everything (4,341), including the slow fuzz sweeps
 ```
 
 **Every pull request runs the fast suite automatically** — your PR gets a

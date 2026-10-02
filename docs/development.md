@@ -3,19 +3,20 @@
 ## Setup
 
 ```bash
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-python main.py
+uv sync
+uv run python main.py
 ```
+
+`uv sync` creates `.venv/` from `pyproject.toml` + `uv.lock`; `uv run` uses it.
+Those two files are the dependency source of truth.
 
 Requires Python 3.12+.
 
 ## Running tests
 
 ```bash
-python -m pytest -m "not slow"     # the fast suite (~3,100 tests, ~5 min; what CI runs)
-python -m pytest                   # everything (~3,900), including the slow fuzz sweeps
+uv run pytest -q -m "not slow"     # the fast suite (3,536 tests; what CI runs)
+uv run pytest -q                   # everything (4,341), including the slow fuzz sweeps
 ```
 
 Every pull request runs the fast suite. A fix or a feature comes with its

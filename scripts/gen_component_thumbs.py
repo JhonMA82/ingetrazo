@@ -6,7 +6,7 @@ The Components tray shows PRE-RENDERED images (resources/components/thumbs)
 so opening the panel never touches the GL renderer. Run this whenever the
 component models change:
 
-    QT_QPA_PLATFORM=xcb venv/bin/python scripts/gen_component_thumbs.py
+    QT_QPA_PLATFORM=xcb uv run python scripts/gen_component_thumbs.py
 
 Needs a real display (the render pipeline is the app's own paintGL); axes
 and sky are patched out for a clean flat background.

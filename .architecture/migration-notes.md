@@ -20,11 +20,61 @@ facts. They are not normative — the contract remains authoritative.
 **Collection verified exactly:** `pytest -q -m "not slow" --collect-only`
 → `3536/4341 tests collected (805 deselected)` in 10.75 s, matching the contract.
 
+### 1.0 The contract's own baseline was recorded in an incomplete environment
+
+Collection differs between the system Python and a conforming one, and the
+difference reconciles exactly:
+
+| Environment | not-slow | total |
+|---|---|---|
+| System Python (contract's stated baseline) | 3,536 | 4,341 |
+| uv / conforming | **3,586** | **4,391** |
+
+The 50-test gap is fully accounted for:
+
+- `tests/test_dxf_import.py` — **23** tests collect only when `ezdxf` is present
+- `tests/test_solid_tools.py` — **20** tests collect only when `manifold3d` is present
+- `tests/test_door_through_wall.py` — **2** tests collect only when `manifold3d` is present
+- `tests/test_pyproject.py` — **5** new dependency-drift guards (this migration)
+
+`3,536 + 45 + 5 = 3,586` and `4,341 + 45 + 5 = 4,391`; the 805 `slow` tests are
+unchanged in both.
+
+So the contract's `3,536 / 4,341` is the count for an environment **missing
+`ezdxf` and `manifold3d`**, in which 45 tests are not even collected and 3 more
+genuinely fail. **`3,586 / 4,391` is the baseline the migration must protect.**
+The original 3,536 all still exist; nothing was lost.
+
 System Python carries only `numpy 2.5.3`, `PySide6 6.11.2`, `pytest 9.1.1`.
 `openskp`, `ezdxf`, `manifold3d` and `mapbox_earcut` are **absent**, so
 `python main.py --check` exits **1** (`NOT OK — missing mapbox_earcut,
-manifold3d`) before the UV migration. Missing dependencies produce *skips*,
-not failures.
+manifold3d`) before the UV migration.
+
+### 1.0 The pre-UV baseline is NOT green — and that is not a code defect
+
+Running the fast suite in the system Python produces **3 real failures**, not
+skips:
+
+```text
+FAILED tests/test_nested_instances.py::test_skp_export_writes_the_prototype_once_and_places_it
+FAILED tests/test_openskp_compat.py::test_the_patch_is_installed_and_reads_instance_paths
+FAILED tests/test_openskp_compat.py::test_an_empty_path_is_the_old_fixed_layout
+```
+
+All three are `ModuleNotFoundError: No module named 'openskp'`.
+`tests/test_openskp_compat.py` imports `openskp` with **no skip guard**, and
+`tests/test_nested_instances.py:273` raises
+`RuntimeError("OpenSKP is required for SKP export")` — so openskp is a
+**mandatory** runtime dependency and its absence is a genuine environment
+failure by design, not a skip condition.
+
+**Consequence for the workstream order:** the baseline can only be recorded in
+a conforming environment, so `uv sync` has to precede the baseline record. All
+four of those tests pass under `uv run` immediately after `uv sync`, which
+confirms the failures were purely the missing dependency. This is a sequencing
+adjustment forced by evidence, not a re-ordering of the contract: the contract
+already places UV before all refactoring, and the baseline exists to protect
+the refactor.
 
 ### 1.1 The single-process test command is not reproducible here
 
@@ -52,23 +102,45 @@ done
 
 396 test files → 17 shards. Verified: shard 1 = 177 passed in 69 s.
 
-## 2. UV feasibility (scratch-dir probe, repo untouched)
+## 2. UV feasibility — probe, then landed
 
-`uv lock` resolves 23 packages in ~7 s.
+`uv lock` resolves 23 packages. Proven first in a scratch directory, then
+actually landed in the repository.
 
 - openskp 1.3.0 pinned to
   `rev=291700bc213655a00461838de71e5f206311e619#291700bc213655a00461838de71e5f206311e619`
-  — the approved SHA exactly.
+  — the approved SHA exactly. After `uv sync`, the installed distribution's
+  `direct_url.json` reports `commit_id` and `requested_revision` both equal to
+  `291700bc213655a00461838de71e5f206311e619`.
 - Root project records `source = { virtual = "." }` → **no build backend is
   introduced and the project is not installed**, as the contract requires.
 - `requires-python = ">=3.11"` honoured.
 - Transitive additions (`defusedxml`, `mapbox-earcut`, `shapely`, `trimesh`)
   are openskp's own dependencies → **no new direct runtime dependency**.
 
-**Caveat:** `[tool.uv] version-path` is **not supported by uv 0.12.5**
-(`unknown field`). Version must therefore be static in `pyproject.toml` even
-though `core/version.py` is the application's source of truth — so a drift
-guard is needed so the two cannot diverge.
+### 2.1 Landed state
+
+`uv lock` + `uv sync` create `.venv/` with 20 packages
+(`PySide6 6.11.2`, `numpy 2.5.3`, `ezdxf 1.4.4`, `manifold3d 3.5.4`,
+`openskp 1.3.0` from the pinned SHA, `pytest 9.1.1`, plus openskp's own deps).
+
+`main.py --check` flips from **NOT OK (exit 1)** in the system Python to
+**OK (exit 0)** under uv: `earcut (openskp): found`, `manifold3d: found`.
+
+**Interpreter note:** `uv sync` created `.venv` on **CPython 3.12.13** (uv's
+managed interpreter), not the system 3.14.7. That is inside the declared
+`>=3.11` range and the contract only forbids changing the *range*, so it is
+accepted — but it is a difference from the README's "developed on Python 3.14"
+and worth a conscious decision.
+
+### 2.2 Version drift guard
+
+`[tool.uv] version-path` is **not supported by uv 0.12.5** (`unknown field`), so
+`pyproject.toml` repeats the version statically while `core/version.py` remains
+the application's source of truth. `tests/test_pyproject.py` (5 tests) fails the
+build if the two ever diverge, and also pins the openskp SHA, the exact five
+runtime dependencies, the pytest-only dev group, and the absence of a
+`[build-system]` table.
 
 ## 3. WU-UV-01 dependency consumer inventory
 

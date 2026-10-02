@@ -21,7 +21,7 @@ set -euo pipefail
 ROOT=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
 OUT=${1:-$ROOT/dist}
 WORK=${INGETRAZO_BUILD_DIR:-$ROOT/build}
-PYTHON=${PYTHON:-$ROOT/venv/bin/python}
+PYTHON=${PYTHON:-$ROOT/.venv/bin/python}
 ARCH=${ARCH:-x86_64}
 
 cd "$ROOT"

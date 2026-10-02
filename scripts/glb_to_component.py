@@ -2,7 +2,7 @@
 # Copyright (C) 2026 Marco Sumari Tellez and IngeTrazo contributors.
 """Convert a (CC0/CC-BY!) glTF/GLB model into a bundled starter component.
 
-    venv/bin/python scripts/glb_to_component.py model.glb key \
+    uv run python scripts/glb_to_component.py model.glb key \
         [--max-faces 60000] [--tex-size 1024] [--height H]
 
 Reads the GLB with the app's own importer (formats/glb.py), decimates

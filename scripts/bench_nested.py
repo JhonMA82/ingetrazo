@@ -1,5 +1,5 @@
 """Benchmark: editar grupos anidados sobre la Plaza Yanque, medido con reloj.
-Uso: cd <checkout> && <venv python> scripts/bench_nested.py <igz> <etiqueta> <salida.json>
+Uso: cd <checkout> && <uv run python> scripts/bench_nested.py <igz> <etiqueta> <salida.json>
 Entra y sale por niveles (contenedor → banca → listón), mueve un hijo en cada
 nivel y mueve geometría suelta dentro del último. Ventana GL real (xcb)."""
 import os, sys, json, time, statistics as st

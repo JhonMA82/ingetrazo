@@ -1,5 +1,5 @@
 """Startup, opening and memory of a real document — and a LEAK check.
-Uso: cd <checkout> && <venv python> scripts/bench_startup.py <igz> <salida.json>
+Uso: cd <checkout> && <uv run python> scripts/bench_startup.py <igz> <salida.json>
 Abre una ventana GL real (xcb) unos segundos.
 
 The leak check opens the same document REOPENS times in a row: each open

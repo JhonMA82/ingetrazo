@@ -9,7 +9,7 @@ Transform IngeTrazo incrementally and behavior-preserving to reduce cognitive sc
 
 ## Work Units
 - [~] WU-1 — WU-00 Baseline record
-  - Touched Files: [".architecture/handoff.json",".architecture/migration-notes.md","ARCHITECTURE.md"]
+  - Touched Files: [".architecture/handoff.json",".architecture/migration-notes.md",".github/workflows/ci.yml","ARCHITECTURE.md","CONTRIBUTING.md","README.md","docs/development.md","packaging/build-appimage.sh","packaging/build-macos-app.sh","pyproject.toml","scripts/bench_nested.py","scripts/bench_session.py","scripts/bench_startup.py","scripts/gen_component_thumbs.py","scripts/glb_to_component.py","scripts/install_desktop.sh","scripts/release_check.sh","tests/test_pyproject.py","uv.lock"]
   - Requirements: REQ-1, REQ-2
   - Constraints: 
   - Acceptance: Both baseline suites are executed and their collected/passed/skipped counts, the commit, working-tree state, Python version and OS are recorded. Characterization tests exist only for the three gaps the contract names. No refactor has started.
